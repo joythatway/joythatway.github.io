@@ -1228,6 +1228,8 @@ function updateMusicUi() {
 function toggleMusic() {
   if (!bgm) return;
   if (!musicOn) {
+    /* 点唱机 = 想听声音：如果总开关关着，先打开它 */
+    if (!soundOn) setSound(true);
     musicOn = true;
     const p = bgm.play();
     if (p && p.catch) {
@@ -1341,15 +1343,20 @@ function setSound(on) {
   if (audioCtx.state === 'suspended') audioCtx.resume();
   soundOn = on;
   masterGain.gain.setTargetAtTime(on ? 1 : 0, audioCtx.currentTime, 0.15);
+
+  /* SOUND 是页面总开关：关掉时唱片音乐也一起停 */
+  if (!on && musicOn) {
+    musicOn = false;
+    if (bgm) bgm.pause();
+    updateMusicUi();
+  }
   updateSoundUi();
 }
 
 function updateSoundUi() {
-  const label = 'SOUND · ' + (soundOn ? 'ON' : 'OFF');
+  const label = '♪ SOUND · ' + (soundOn ? 'ON' : 'OFF');
   const a = document.getElementById('soundBtn');
-  const b = document.getElementById('shSound');
   if (a) { a.textContent = label; a.setAttribute('aria-pressed', String(soundOn)); a.classList.toggle('on', soundOn); }
-  if (b) { b.textContent = label; b.setAttribute('aria-pressed', String(soundOn)); b.classList.toggle('on', soundOn); }
 }
 
 function blip(freq = 520, dur = 0.06) {

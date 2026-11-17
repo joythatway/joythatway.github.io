@@ -422,7 +422,7 @@ function toggleSound() {
   S.soundOn = !S.soundOn;
   soundBtn.classList.toggle('on', S.soundOn);
   soundBtn.setAttribute('aria-pressed', String(S.soundOn));
-  soundBtn.textContent = S.soundOn ? '♪ SOUND ON' : '♪ SOUND OFF';
+  soundBtn.textContent = S.soundOn ? '♪ SOUND · ON' : '♪ SOUND · OFF';
   if (S.soundOn) audio.enable();
   else audio.disable();
 }
