@@ -125,68 +125,21 @@ body.is-ready #globe { opacity: 1; }
 .hud-sep { color: var(--line-hot); }
 .hud-right { flex-wrap: wrap; justify-content: flex-end; }
 
-.sample-wrap { position: relative; }
-.sample-tag {
-  color: var(--pin);
-  border-color: rgba(255, 200, 87, .45);
-  background: rgba(255, 200, 87, .04);
-  cursor: help;
-  transition: color .12s steps(2), border-color .12s steps(2), background .12s steps(2);
-}
-.sample-tag:hover,
-.sample-wrap.is-open .sample-tag {
-  color: #0b0d16;
-  background: var(--pin);
-  border-color: var(--pin);
-}
-.sample-note {
-  position: absolute;
-  top: calc(100% + 9px);
-  right: 0;
-  width: 224px;
-  margin: 0;
-  padding: 11px 12px 10px;
-  background: var(--panel);
-  border: 2px solid var(--line);
-  box-shadow: var(--shadow-hard);
-  font-family: var(--term);
-  font-size: 16px;
-  line-height: 1.18;
-  letter-spacing: .03em;
-  color: var(--ink-2);
-  text-transform: none;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-5px);
-  transition: opacity .12s steps(2), transform .12s steps(2), visibility 0s .12s;
-  pointer-events: none;
-  z-index: 70;
-}
-.sample-wrap:hover .sample-note,
-.sample-wrap:focus-within .sample-note,
-.sample-wrap.is-open .sample-note {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-  transition-delay: 0s;
-}
-
 /* 顶部：返回房间（跟 HUD 一个尺度，不抢地球的视觉重心） */
 .earth-return {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  width: auto;
-  min-width: 112px;
-  height: 28px;
+  gap: 4px;
+  width: 132px;
+  height: 32px;
   box-sizing: border-box;
-  padding: 0 9px;
+  padding: 0 8px;
   background: rgba(4, 8, 14, .9);
   border: 1px solid rgba(120, 150, 180, .42);
   color: var(--ink-2);
   font-family: var(--pixel);
-  font-size: 8px;
+  font-size: 7px;
   line-height: 1;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -624,10 +577,8 @@ body.is-ready .boot { opacity: 0; visibility: hidden; }
   .hud-left { gap: 6px; }
   .hud-sub { padding-left: 22px; font-size: 6px; letter-spacing: .12em; }
   .hud-right { gap: 8px; align-items: center; }
-  .sample-wrap { display: none; }   /* 移动端把 SAMPLE 标注留给信息卡，给返回按钮让位 */
-  .sample-note { width: 200px; font-size: 15px; }
   .hud-link { font-size: 6px; }
-  .earth-return { width: auto; min-width: 100px; height: 26px; padding: 0 8px; font-size: 7px; gap: 4px; letter-spacing: .04em; }
+  .earth-return { width: 112px; height: 28px; padding: 0 7px; font-size: 6.5px; gap: 4px; letter-spacing: .04em; }
   .earth-return kbd { display: none; }
 
   .headline { top: 68px; left: 14px; max-width: 60vw; }

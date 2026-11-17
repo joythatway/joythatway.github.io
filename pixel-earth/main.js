@@ -112,8 +112,6 @@ const el = {
   icLon: $('#ic-lon'),
   icNote: $('#ic-note'),
   live: $('#live'),
-  sampleWrap: $('#sample-wrap'),
-  sampleTag: $('#sample-tag'),
   returnBtn: $('#returnBtn'),
   brand: document.querySelector('.brand'),
   spaceGlow: $('#space-glow'),
@@ -1144,18 +1142,6 @@ function bindEvents() {
   if (el.returnBtn) {
     el.returnBtn.addEventListener('click', () => { location.href = ROOM_URL; });
   }
-
-  el.sampleTag.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = el.sampleWrap.classList.toggle('is-open');
-    el.sampleTag.setAttribute('aria-expanded', String(open));
-  });
-  document.addEventListener('click', (e) => {
-    if (!el.sampleWrap.contains(e.target)) {
-      el.sampleWrap.classList.remove('is-open');
-      el.sampleTag.setAttribute('aria-expanded', 'false');
-    }
-  });
 }
 
 function defineDebug() {
