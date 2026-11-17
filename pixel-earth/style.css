@@ -171,23 +171,24 @@ body.is-ready #globe { opacity: 1; }
   transition-delay: 0s;
 }
 
-/* 顶部：返回房间（与影院放映 HUD 的两个按钮同尺寸） */
+/* 顶部：返回房间（跟 HUD 一个尺度，不抢地球的视觉重心） */
 .earth-return {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 168px;
-  height: 38px;
+  gap: 5px;
+  width: auto;
+  min-width: 112px;
+  height: 28px;
   box-sizing: border-box;
-  padding: 0 10px;
+  padding: 0 9px;
   background: rgba(4, 8, 14, .9);
   border: 1px solid rgba(120, 150, 180, .42);
   color: var(--ink-2);
   font-family: var(--pixel);
-  font-size: 7.5px;
+  font-size: 8px;
   line-height: 1;
-  letter-spacing: .1em;
+  letter-spacing: .04em;
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
@@ -201,9 +202,10 @@ body.is-ready #globe { opacity: 1; }
   color: #06110e;
 }
 .earth-return kbd {
-  font-size: 6px;
+  font-size: 5px;
   padding: 2px 3px 1px;
   margin-left: 2px;
+  color: var(--dimmer);
 }
 
 /* ---------------------------------------------------------------- 左标题 */
@@ -625,7 +627,7 @@ body.is-ready .boot { opacity: 0; visibility: hidden; }
   .sample-wrap { display: none; }   /* 移动端把 SAMPLE 标注留给信息卡，给返回按钮让位 */
   .sample-note { width: 200px; font-size: 15px; }
   .hud-link { font-size: 6px; }
-  .earth-return { width: 132px; height: 32px; padding: 0 8px; font-size: 6.5px; gap: 4px; letter-spacing: .06em; }
+  .earth-return { width: auto; min-width: 100px; height: 26px; padding: 0 8px; font-size: 7px; gap: 4px; letter-spacing: .04em; }
   .earth-return kbd { display: none; }
 
   .headline { top: 68px; left: 14px; max-width: 60vw; }
