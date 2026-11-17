@@ -23,6 +23,11 @@ const params = new URLSearchParams(location.search);
 const isOn = (v) => v === '1' || v === 'true' || v === 'yes';
 const wantsScreening = isOn((params.get('screening') || '').toLowerCase());
 
+/* 从房间主站进来时，放映结束应直接回房间，而不是落回影院大厅 */
+const fromRoom = (params.get('from') || '').toLowerCase() === 'room';
+const IS_DEV = location.pathname.includes('/pixel-homepage/direction-01-projector');
+const ROOM_URL = IS_DEV ? '../direction-02-room/' : '../index.html';
+
 /** 卷参数：支持 id（plasma）或序号（3 = 第 3 卷，1-based；0 也当作第 1 卷） */
 function resolveReel(raw) {
   if (raw == null || raw === '') return 0;
@@ -53,6 +58,12 @@ const marqueeBottom = $('#marqueeBottom');
 const screeningEl = $('#screening');
 const soundBtn = $('#soundBtn');
 const exitBtn = $('#exitBtn');
+const exitHint = $('#exitHint');
+
+if (fromRoom) {
+  exitBtn.innerHTML = '✕ 返回房间 <kbd>ESC</kbd>';
+  if (exitHint) exitHint.innerHTML = '<kbd>ESC</kbd> 返回房间';
+}
 const reelNoEl = $('#reelNo');
 const reelNameEl = $('#reelName');
 const reelCnEl = $('#reelCn');
@@ -348,6 +359,12 @@ function exitScreening() {
   root.classList.remove('hud-on', 'is-filming', 'is-counting');
   screeningEl.setAttribute('aria-hidden', 'true');
   toastEl.classList.remove('show');
+
+  /* 从房间进来的：直接回主站房间 */
+  if (fromRoom) {
+    location.href = ROOM_URL;
+    return;
+  }
 
   /* 大厅回来 */
   S.testcard?.start();

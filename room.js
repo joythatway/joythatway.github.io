@@ -162,7 +162,7 @@ function goProject(target) {
     flash.classList.add('on');
   }
   const url = target === 'cinema'
-    ? PROJECT_URLS.cinema + '?screening=1&reel=' + encodeURIComponent(player.reel.id)
+    ? PROJECT_URLS.cinema + '?screening=1&reel=' + encodeURIComponent(player.reel.id) + '&from=room'
     : PROJECT_URLS.earth;
   setTimeout(() => { location.href = url; }, 430);
 }
