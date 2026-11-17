@@ -128,6 +128,7 @@ bgx.imageSmoothingEnabled = false;
 
 /* ---------- 台词 / 状态 ----------------------------------------------- */
 let lampOn = true;
+let musicOn = false;
 let hoverKey = null;
 let modalOpen = null;
 let hintHidden = false;
@@ -972,20 +973,21 @@ function shadeRgb(rgb, f) {
 }
 
 function drawGlobe(t) {
-  const cx = 105, cy = 100, rad = 9;
-  /* 桌面阴影 / 木质底座 */
-  R(ctx, cx - 9, 111, 18, 2, 'rgba(0,0,0,.38)');
-  R(ctx, cx - 7, 109, 14, 2, '#6b4d2e');
-  R(ctx, cx - 7, 109, 14, 1, '#a37c46');
-  R(ctx, cx - 5, 111, 10, 1, '#4a3420');
+  /* 地球仪挪到窗台上，给桌面的唱机让位 */
+  const cx = 40, cy = 92, rad = 7;
+  /* 窗台阴影 / 木质底座 */
+  R(ctx, cx - 8, 101, 16, 1, 'rgba(0,0,0,.35)');
+  R(ctx, cx - 6, 100, 12, 2, '#6b4d2e');
+  R(ctx, cx - 6, 100, 12, 1, '#a37c46');
+  R(ctx, cx - 4, 102, 8, 1, '#4a3420');
   /* 金色半环 */
   for (let a = Math.PI * 0.52; a < Math.PI * 1.48; a += 0.09) {
-    const gx = Math.round(cx + Math.cos(a) * (rad + 1.3));
-    const gy = Math.round(cy + Math.sin(a) * (rad + 1.3));
+    const gx = Math.round(cx + Math.cos(a) * (rad + 1.2));
+    const gy = Math.round(cy + Math.sin(a) * (rad + 1.2));
     PX(ctx, gx, gy, Math.cos(a) > 0 ? '#8f7338' : '#c9a85c');
   }
   /* 立杆 */
-  R(ctx, cx - 1, 108, 2, 3, '#8f7338');
+  R(ctx, cx - 1, 98, 2, 2, '#8f7338');
   /* 球体：每一像素按球面坐标算大陆 / 海洋，然后缓慢自转 */
   const spin = t * 0.42;
   for (let dy = -rad; dy <= rad; dy++) {
@@ -1003,7 +1005,7 @@ function drawGlobe(t) {
       let base;
       if (ice) base = GLOBE_COLORS.ice[v > 0.4 ? 1 : 0];
       else if (v > 0.62) base = GLOBE_COLORS.land[v > 1.35 ? 2 : v > 1 ? 1 : 0];
-      else base = GLOBE_COLORS.ocean[Math.max(0, Math.min(2, 1 + Math.round(dy / 9)))];
+      else base = GLOBE_COLORS.ocean[Math.max(0, Math.min(2, 1 + Math.round(dy / 7)))];
       /* 光从左上来，边缘压暗 */
       const light = 0.72 + (-dx / rad) * 0.18 + (-dy / rad) * 0.2 + (z / rad) * 0.12;
       ctx.fillStyle = shadeRgb(base, Math.max(0.45, Math.min(1.25, light)));
@@ -1011,9 +1013,8 @@ function drawGlobe(t) {
     }
   }
   /* 高光 + 边缘暗线 */
-  PX(ctx, cx - 4, cy - 4, 'rgba(255,255,255,.55)');
-  PX(ctx, cx - 5, cy - 3, 'rgba(255,255,255,.32)');
-  PX(ctx, cx - 3, cy - 5, 'rgba(255,255,255,.28)');
+  PX(ctx, cx - 3, cy - 3, 'rgba(255,255,255,.55)');
+  PX(ctx, cx - 4, cy - 2, 'rgba(255,255,255,.3)');
   ctx.strokeStyle = 'rgba(8,10,18,.5)';
   ctx.beginPath();
   ctx.arc(cx + 0.5, cy + 0.5, rad, 0, Math.PI * 2);
@@ -1021,11 +1022,115 @@ function drawGlobe(t) {
 }
 
 /* =====================================================================
+   2.6 桌面左边的胶片唱机（点击播放 / 暂停房间 BGM）
+   ===================================================================== */
+let vinylSpin = 0;
+let vinylSpeed = 0;
+let tonearmT = 0;
+let noteTimer = 0;
+const musicNotes = [];
+
+function drawTurntable(t, dt) {
+  const cx = 106, rad = 7, pivotX = 115, pivotY = 96;
+  const targetSpeed = musicOn ? 2.6 : 0;
+  vinylSpeed += (targetSpeed - vinylSpeed) * Math.min(1, dt * 4.5);
+  vinylSpin += vinylSpeed * dt;
+  tonearmT += ((musicOn ? 1 : 0) - tonearmT) * Math.min(1, dt * 9);
+
+  /* 桌面阴影 + 木壳 */
+  R(ctx, 95, 111, 23, 2, 'rgba(0,0,0,.32)');
+  R(ctx, 96, 104, 22, 8, '#3b2a31');
+  R(ctx, 96, 104, 22, 1, '#5b4048');
+  R(ctx, 96, 111, 22, 1, '#20151a');
+  R(ctx, 97, 106, 2, 4, '#2a1c22');
+
+  /* 前面板：品牌 / 指示灯 / 播放-暂停图标 */
+  text3(ctx, 'JTW', 98, 107, 'rgba(180,150,110,.5)', 1, 1);
+  R(ctx, 115, 107, 2, 2, musicOn ? '#8affa8' : '#3a2b25');
+  if (musicOn) {
+    R(ctx, 98, 108, 1, 3, 'rgba(255,230,190,.6)');
+    R(ctx, 100, 108, 1, 3, 'rgba(255,230,190,.6)');
+  } else {
+    PX(ctx, 98, 108, 'rgba(255,230,190,.7)');
+    PX(ctx, 99, 107, 'rgba(255,230,190,.7)');
+    PX(ctx, 99, 108, 'rgba(255,230,190,.7)');
+    PX(ctx, 99, 109, 'rgba(255,230,190,.7)');
+    PX(ctx, 100, 108, 'rgba(255,230,190,.7)');
+  }
+
+  /* 转盘底座 */
+  R(ctx, 100, 102, 14, 2, '#4a3a45');
+  R(ctx, 100, 102, 14, 1, '#6b5662');
+
+  /* 黑胶唱片 */
+  for (let dy = -rad; dy <= rad; dy++) {
+    for (let dx = -rad; dx <= rad; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 > rad * rad) continue;
+      const ring = Math.sqrt(d2);
+      let color;
+      if (ring > rad - 1.2) color = '#0b0810';
+      else if ((ring | 0) % 2 === 0) color = '#191320';
+      else color = '#221a2a';
+      if (ring < 2.6) color = '#8c5a4c';
+      if (ring < 1.2) color = '#e0a080';
+      ctx.fillStyle = color;
+      ctx.fillRect(cx + dx, 101 + dy, 1, 1);
+    }
+  }
+  /* 旋转高光 + 中心轴 */
+  const gx = Math.round(cx + Math.cos(vinylSpin) * (rad - 2));
+  const gy = Math.round(101 + Math.sin(vinylSpin) * (rad - 2));
+  PX(ctx, gx, gy, 'rgba(225,215,245,.55)');
+  PX(ctx, Math.round(cx - Math.cos(vinylSpin) * (rad - 2)), Math.round(101 - Math.sin(vinylSpin) * (rad - 2)), 'rgba(225,215,245,.16)');
+  PX(ctx, cx, 101, '#f0e6d2');
+
+  /* 唱臂 */
+  const endX = pivotX - 6 * tonearmT;
+  const endY = 92 + 9 * tonearmT;
+  for (let i = 0; i <= 8; i++) {
+    const px = Math.round(pivotX + (endX - pivotX) * i / 8);
+    const py = Math.round(pivotY + (endY - pivotY) * i / 8);
+    PX(ctx, px, py, '#cbb89a');
+  }
+  R(ctx, Math.round(endX) - 1, Math.round(endY), 2, 1, '#e8d8be');
+  R(ctx, pivotX - 1, pivotY - 1, 3, 3, '#6b5a4a');
+  PX(ctx, pivotX, pivotY - 1, '#a89178');
+
+  /* 播放时飘出的像素音符 */
+  if (musicOn) {
+    noteTimer += dt;
+    if (noteTimer > 0.55) {
+      noteTimer = 0;
+      musicNotes.push({
+        x: cx + (Math.random() * 10 - 5),
+        y: 96,
+        vy: 8 + Math.random() * 6,
+        life: 0,
+        c: Math.random() < 0.5 ? '#ffc857' : '#5cecd4',
+      });
+    }
+  }
+  for (let i = musicNotes.length - 1; i >= 0; i--) {
+    const n = musicNotes[i];
+    n.y -= n.vy * dt;
+    n.life += dt;
+    if (n.y < 82 || n.life > 2.2) { musicNotes.splice(i, 1); continue; }
+    ctx.fillStyle = n.c;
+    ctx.globalAlpha = Math.max(0.15, 1 - n.life / 2.2);
+    ctx.fillRect(Math.round(n.x), Math.round(n.y), 1, 2);
+    ctx.fillRect(Math.round(n.x) + 1, Math.round(n.y) + 1, 1, 1);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* =====================================================================
    3. 热区 / 交互
    ===================================================================== */
 const HOTSPOTS = {
   monitor: { x: 116, y: 48, w: 78, h: 72, c: '92,236,212' },
-  globe: { x: 92, y: 84, w: 24, h: 30, c: '255,200,87' },
+  globe: { x: 28, y: 80, w: 28, h: 26, c: '255,200,87' },
+  turntable: { x: 92, y: 88, w: 28, h: 28, c: '255,200,87' },
   shelf: { x: 240, y: 2, w: 80, h: 144, c: '255,200,87' },
   window: { x: 6, y: 14, w: 90, h: 90, c: '92,236,212' },
   lamp: { x: 204, y: 72, w: 34, h: 44, c: '255,200,87' },
@@ -1034,6 +1139,7 @@ const HOTSPOTS = {
 const HOTSPOT_EL = {
   monitor: document.getElementById('hs-monitor'),
   globe: document.getElementById('hs-globe'),
+  turntable: document.getElementById('hs-turntable'),
   shelf: document.getElementById('hs-shelf'),
   window: document.getElementById('hs-window'),
   lamp: document.getElementById('hs-lamp'),
@@ -1107,6 +1213,33 @@ const player = createReelPlayer({
   },
 });
 player.start();
+
+/* ---------- 房间 BGM：胶片唱机 ---------- */
+const bgm = document.getElementById('roomBgm');
+if (bgm) bgm.volume = 0.58;
+
+function updateMusicUi() {
+  const stateEl = document.getElementById('ttState');
+  if (stateEl) stateEl.textContent = musicOn ? 'PAUSE' : 'PLAY';
+  const btn = document.getElementById('hs-turntable');
+  if (btn) btn.setAttribute('aria-pressed', String(musicOn));
+}
+
+function toggleMusic() {
+  if (!bgm) return;
+  if (!musicOn) {
+    musicOn = true;
+    const p = bgm.play();
+    if (p && p.catch) {
+      p.catch(() => { musicOn = false; updateMusicUi(); });
+    }
+  } else {
+    musicOn = false;
+    bgm.pause();
+  }
+  updateMusicUi();
+  blip(musicOn ? 720 : 320, 0.05);
+}
 
 function stageRect() {
   return document.getElementById('stage').getBoundingClientRect();
@@ -1288,6 +1421,7 @@ function drawAvatar(t) {
 buildRoom(bgx);
 syncHotspots();
 updateSoundUi();
+updateMusicUi();
 
 /* 预览画面：</head> 里没写，这里直接画第一帧，避免闪黑 */
 ctx.drawImage(bg, 0, 0);
@@ -1315,6 +1449,11 @@ document.querySelectorAll('[data-nav]').forEach((el) => {
     goProject(el.dataset.nav);
     hideHint();
   });
+});
+
+document.getElementById('hs-turntable').addEventListener('click', () => {
+  toggleMusic();
+  hideHint();
 });
 
 document.getElementById('hs-lamp').addEventListener('click', () => {
@@ -1380,6 +1519,7 @@ function drawRoom(t, dt) {
   drawWindow(t, dt);
   drawMonitor(t);
   drawLamp(t, dt);
+  drawTurntable(t, dt);
   drawGlobe(t);
   drawCat(t);
   drawSteam(t);
@@ -1428,7 +1568,8 @@ window.__room = {
     hoverKey = null;
   },
   lamp(v) { lampOn = v === undefined ? !lampOn : !!v; },
+  music: () => toggleMusic(),
   reel(i) { player.setReel(i); },
   next() { player.next(); },
-  state: () => ({ lampOn, soundOn, modalOpen, leaving, hoverKey, reel: player.reel.id, urls: PROJECT_URLS }),
+  state: () => ({ lampOn, soundOn, musicOn, modalOpen, leaving, hoverKey, reel: player.reel.id, urls: PROJECT_URLS }),
 };

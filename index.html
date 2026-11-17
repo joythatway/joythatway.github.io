@@ -31,7 +31,7 @@
     <div class="mobile-intro">
       <p class="mi-kicker">JOYROOM.SYS · MAIN PAGE</p>
       <h1 class="mi-title">一个 8-bit 房间</h1>
-      <p class="mi-desc">一台旧电脑、一个书架、一扇下着雨的窗。<br>点显示器去项目①，点地球仪去项目③。</p>
+      <p class="mi-desc">一台旧电脑、一个书架、一扇下着雨的窗。<br>点显示器去项目①，点地球仪去项目③，点唱机放首歌。</p>
     </div>
 
     <div class="stage" id="stage">
@@ -42,8 +42,8 @@
         <button class="hotspot" id="hs-monitor" data-nav="cinema" data-hover="monitor" type="button" aria-label="进入项目① 像素放映室">
           <span class="hs-tag"><b>PIXEL CINEMA</b> 项目① 放映室</span>
         </button>
-        <button class="hotspot" id="hs-globe" data-nav="earth" data-hover="globe" type="button" aria-label="进入项目③ 像素地球">
-          <span class="hs-tag"><b>PIXEL EARTH</b> 项目③ 地球仪</span>
+        <button class="hotspot" id="hs-turntable" data-hover="turntable" type="button" aria-label="播放或暂停房间音乐">
+          <span class="hs-tag"><b>TURNTABLE</b> 胶片唱机 <i id="ttState">PLAY</i></span>
         </button>
         <button class="hotspot" id="hs-shelf" data-open="about" data-hover="shelf" type="button" aria-label="打开关于我">
           <span class="hs-tag"><b>ARCHIVE</b> 关于我 <i>ABOUT</i></span>
@@ -56,6 +56,9 @@
         </button>
         <button class="hotspot mini" id="hs-cat" data-toggle="cat" data-hover="cat" type="button" aria-label="摸摸猫">
           <span class="hs-tag"><b>CAT.SYS</b> 摸摸猫</span>
+        </button>
+        <button class="hotspot" id="hs-globe" data-nav="earth" data-hover="globe" type="button" aria-label="进入项目③ 像素地球">
+          <span class="hs-tag"><b>PIXEL EARTH</b> 项目③ 地球仪</span>
         </button>
       </div>
 
@@ -72,7 +75,7 @@
       <span class="px">JOYROOM.SYS</span>
       <span class="dim">主站 · 320 × 180</span>
       <span class="dim">·</span>
-      <span class="dim">显示器 → 项目① · 地球仪 → 项目③</span>
+      <span class="dim">显示器 → 项目① · 地球仪 → 项目③ · 唱机 → 放歌</span>
     </p>
 
     <nav class="mobile-nav" aria-label="房间快捷入口">
@@ -211,6 +214,9 @@
 
   <div class="crt-fx" aria-hidden="true"></div>
   <div class="crt-flash" id="crtFlash" aria-hidden="true"></div>
+
+  <!-- 房间 BGM：胶片唱机播放的循环音乐（自作曲，见 tools/synth-room-theme.py） -->
+  <audio id="roomBgm" src="assets/room-theme.mp3" loop preload="auto"></audio>
 
   <!-- 放映引擎的源 canvas：常驻但不可见，只用来喂房间里的 CRT -->
   <canvas id="reel" class="reel-src" width="192" height="108" aria-hidden="true"></canvas>
