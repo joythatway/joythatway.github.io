@@ -73,6 +73,10 @@ const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const $ = (sel) => document.querySelector(sel);
 
+/* 主站（8-bit 房间）地址：本地三方向工作区 / 独立仓库 / 部署后 */
+const IS_DEV = location.pathname.includes('/pixel-homepage/direction-03-globe');
+const ROOM_URL = IS_DEV ? '../direction-02-room/' : '../index.html';
+
 /** 经纬度 → three.js SphereGeometry 上的单位向量。
  *
  *  SphereGeometry 的 UV 约定（r160 源码）：
@@ -110,6 +114,8 @@ const el = {
   live: $('#live'),
   sampleWrap: $('#sample-wrap'),
   sampleTag: $('#sample-tag'),
+  returnBtn: $('#returnBtn'),
+  brand: document.querySelector('.brand'),
   spaceGlow: $('#space-glow'),
   readout: $('#readout'),
   reticle: $('#reticle'),
@@ -770,6 +776,7 @@ function onKeyDown(e) {
 
   if (e.key === 'Escape') {
     if (activePin >= 0) { e.preventDefault(); closeCard(); }
+    else { location.href = ROOM_URL; }
     return;
   }
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -1131,6 +1138,12 @@ function bindEvents() {
   });
 
   el.cardClose.addEventListener('click', closeCard);
+
+  /* 返回主站房间 */
+  if (el.brand) el.brand.setAttribute('href', ROOM_URL);
+  if (el.returnBtn) {
+    el.returnBtn.addEventListener('click', () => { location.href = ROOM_URL; });
+  }
 
   el.sampleTag.addEventListener('click', (e) => {
     e.stopPropagation();
