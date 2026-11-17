@@ -1,0 +1,1713 @@
+/* =====================================================================
+   direction-01-projector / style.css
+   像素放映室：影院大厅 + 全屏放映模式
+   依赖 assets/base.css 的字体、配色变量、.panel/.btn/.tag/.hud/.crt-fx
+   ===================================================================== */
+
+/* ---------- 本页局部变量（暖色大厅 / 冷色放映） ---------------------- */
+:root {
+  --expand: 540ms;                         /* 银幕放大时长 */
+  --ease-screen: cubic-bezier(.3, .9, .15, 1);
+
+  /* 大厅：木、丝绒、铜、灯光 */
+  --room-1: #1a110d;
+  --room-2: #0f0908;
+  --velvet: #4a0c14;
+  --velvet-2: #6f1521;
+  --velvet-dark: #2b070c;
+  --brass: #c99a4a;
+  --brass-dim: #8a6a33;
+  --warm: #ffb066;
+  --warm-bright: #ffd9a0;
+  --cinema-ink: #efe6d6;
+
+  /* 放映：冷光 */
+  --projector-cyan: #9fe8ff;
+  --ink-reel: #e9f4ff;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #050609;
+}
+
+body {
+  color: var(--cinema-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 关掉全局滚动条带来的抖动（本页贴屏，不滚动） */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+
+/* =====================================================================
+   1. 银幕（fixed，JS 给它 left/top/width/height）
+   ===================================================================== */
+.screen {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 200px;
+  height: 112px;
+  z-index: 50;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition:
+    left var(--expand) var(--ease-screen),
+    top var(--expand) var(--ease-screen),
+    width var(--expand) var(--ease-screen),
+    height var(--expand) var(--ease-screen);
+}
+.screen.no-anim { transition: none !important; }
+.screen.instant .glass,
+.screen.instant .frame,
+.screen.instant .test-overlay { transition: none !important; }
+.screen:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
+
+/* 画框：丝绒 + 铜边 + 跑马灯 */
+.frame {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, #341b13 0%, #1d0e0b 42%, #120806 100%);
+  border: 2px solid #512c1c;
+  border-radius: 7px;
+  box-shadow:
+    0 0 0 5px #0b0506,
+    0 0 0 7px #3d2216,
+    0 0 0 8px rgba(201, 154, 74, .25),
+    0 24px 70px rgba(0, 0, 0, .85),
+    0 30px 70px rgba(255, 158, 80, .14),
+    0 0 150px rgba(255, 160, 85, .2);
+  transition: opacity .42s ease;
+  pointer-events: none;
+}
+.screen.is-full .frame { opacity: 0; }
+
+.frame-inner {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(201, 154, 74, .28);
+  border-radius: 3px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, .75);
+}
+
+/* 跑马灯灯珠 */
+.marquee {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  height: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.marquee-top { top: 4px; }
+.marquee-bottom { bottom: 4px; }
+.bulb {
+  position: relative;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: #3a2a12;
+  box-shadow: inset 0 0 0 1px #120b06;
+}
+.bulb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #ffe6ad;
+  box-shadow: 0 0 7px 2px rgba(255, 196, 104, .55);
+  opacity: .16;
+  animation: bulb-chase 1.6s steps(2, jump-none) infinite;
+  animation-delay: calc(var(--i) * -95ms);
+}
+@keyframes bulb-chase {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: .14; }
+}
+
+/* 四角铜饰 */
+.fx-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--brass-dim);
+  opacity: .75;
+}
+.fx-corner.tl { left: 4px; top: 4px; border-right: 0; border-bottom: 0; }
+.fx-corner.tr { right: 4px; top: 4px; border-left: 0; border-bottom: 0; }
+.fx-corner.bl { left: 4px; bottom: 4px; border-right: 0; border-top: 0; }
+.fx-corner.br { right: 4px; bottom: 4px; border-left: 0; border-top: 0; }
+
+/* 玻璃：画面真正呆的地方 */
+.glass {
+  position: absolute;
+  inset: var(--bezel, 14px);
+  overflow: hidden;
+  background: #04060a;
+  box-shadow:
+    inset 0 0 50px rgba(0, 0, 0, .85),
+    0 0 60px rgba(255, 196, 120, .1);
+  transition: inset var(--expand) var(--ease-screen);
+}
+.screen.is-full .glass { inset: 0; }
+
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 测试卡：像素放大 + 一点点灯泡呼吸 */
+.testcard {
+  image-rendering: pixelated;
+  z-index: 1;
+  opacity: 1;
+  transition: opacity .2s steps(2);
+  animation: card-flicker 4.8s steps(1) infinite;
+}
+@keyframes card-flicker {
+  0%, 44%, 100% { filter: brightness(1); }
+  45% { filter: brightness(.93); }
+  47% { filter: brightness(1.05); }
+  49% { filter: brightness(.97); }
+  51% { filter: brightness(1.03); }
+}
+html.is-filming .testcard { opacity: 0; }
+
+/* 放映画面：按 cover 铺满，JS 直接算好 left/top/width/height（不用 transform，
+   避免和 .layer 的 inset 打架） */
+.reels {
+  inset: auto;
+  left: 0;
+  top: 0;
+  width: 192px;
+  height: 108px;
+  image-rendering: pixelated;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity .18s steps(2);
+}
+html.is-filming .reels { opacity: 1; }
+
+/* 玻璃反光 / 暗角 */
+.glass-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  background:
+    linear-gradient(112deg, rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, .015) 18%, transparent 34%),
+    linear-gradient(0deg, rgba(0, 0, 0, .3) 0%, transparent 16%),
+    linear-gradient(180deg, rgba(0, 0, 0, .22) 0%, transparent 12%),
+    radial-gradient(ellipse at 50% 48%, transparent 52%, rgba(0, 0, 0, .5) 100%);
+  mix-blend-mode: normal;
+}
+.glass-fx::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, .22) 0px,
+    rgba(0, 0, 0, .22) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: .8;
+}
+
+/* ---------- 测试卡上的文案 ------------------------------------------- */
+.test-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  color: var(--cinema-ink);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, .85);
+  transition: opacity .26s ease;
+}
+html.is-counting .test-overlay,
+html.is-filming .test-overlay { opacity: 0; }
+
+.to-top {
+  position: absolute;
+  left: clamp(10px, 1.8vw, 24px);
+  right: clamp(10px, 1.8vw, 24px);
+  top: clamp(8px, 1.6vw, 20px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.to-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--pixel);
+  font-size: clamp(7px, .78vw, 11px);
+  letter-spacing: .14em;
+  color: #f6efe0;
+}
+.to-mark {
+  width: 10px;
+  height: 10px;
+  background:
+    linear-gradient(var(--cyan), var(--cyan)) 0 0 / 4px 4px no-repeat,
+    linear-gradient(var(--magenta), var(--magenta)) 5px 0 / 4px 4px no-repeat,
+    linear-gradient(var(--amber), var(--amber)) 0 5px / 4px 4px no-repeat,
+    linear-gradient(var(--violet), var(--violet)) 5px 5px / 4px 4px no-repeat;
+}
+.to-tag {
+  color: rgba(226, 236, 250, .6);
+  border-color: rgba(160, 190, 220, .35);
+  font-size: clamp(6px, .55vw, 8px);
+  background: rgba(4, 8, 16, .5);
+}
+
+.to-center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-54%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 1vw, 12px);
+  text-align: center;
+}
+.to-kicker {
+  font-size: clamp(8px, 1vw, 12px);
+  letter-spacing: .32em;
+  color: rgba(240, 226, 196, .72);
+  text-transform: uppercase;
+}
+.to-play {
+  font-family: var(--pixel);
+  font-size: clamp(15px, 2.9vw, 42px);
+  line-height: 1.15;
+  letter-spacing: .04em;
+  color: #fff6df;
+  text-shadow:
+    3px 3px 0 #4a1f08,
+    6px 6px 0 rgba(0, 0, 0, .55),
+    0 0 28px rgba(255, 196, 110, .35);
+  animation: play-pulse 2.4s steps(2, jump-none) infinite;
+}
+.to-play .caret {
+  display: inline-block;
+  margin-left: .12em;
+  color: var(--amber);
+  animation: caret-blink 1s steps(2, jump-none) infinite;
+}
+@keyframes play-pulse {
+  0%, 92%, 100% { opacity: 1; }
+  93% { opacity: .55; }
+  96% { opacity: 1; }
+}
+@keyframes caret-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.to-cn {
+  font-size: clamp(9px, 1.15vw, 14px);
+  letter-spacing: .3em;
+  color: rgba(240, 230, 210, .82);
+}
+.to-btn {
+  margin-top: clamp(4px, .8vw, 10px);
+  pointer-events: auto;
+  background: rgba(10, 8, 8, .55);
+  --btn-bd: var(--amber);
+  color: var(--amber);
+  font-size: clamp(7px, .72vw, 10px);
+  padding: clamp(8px, .9vw, 14px) clamp(12px, 1.4vw, 20px);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .35);
+}
+.to-btn:hover { background: var(--amber); border-color: var(--amber); color: #1a1006; }
+.play-tri {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 7px;
+  border-color: transparent transparent transparent currentColor;
+  display: inline-block;
+}
+
+/* 胶片倒数 */
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, visibility 0s linear .3s;
+  pointer-events: none;
+}
+.countdown.on {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .16s ease;
+}
+.countdown canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* =====================================================================
+   2. 影院大厅
+   ===================================================================== */
+.lobby {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity .46s var(--ease-hop);
+}
+html.is-screening .lobby {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .46s var(--ease-hop), visibility 0s linear .46s;
+}
+html.boot-screening .lobby,
+html.boot-screening .screen { opacity: 0; }
+
+.room {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 墙 ------------------------------------------------------------------ */
+.wall {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 48% at 50% 38%, rgba(255, 168, 88, .16), rgba(220, 110, 50, .04) 52%, transparent 74%),
+    linear-gradient(180deg, #1b120e 0%, #150d0b 42%, #0c0707 100%);
+}
+.wall::before {
+  /* 壁布细竖纹 + 暗噪声，避免大面积死黑 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 226, 190, .028) 0 1px, transparent 1px 7px, rgba(0, 0, 0, .14) 7px 9px),
+    repeating-linear-gradient(0deg, rgba(255, 226, 190, .014) 0 1px, transparent 1px 5px);
+  opacity: .9;
+}
+
+/* 银幕投在墙上的暖光（两层：内圈更亮，外圈很大很淡） */
+.wall-glow {
+  position: absolute;
+  left: 50%;
+  top: 3%;
+  width: min(1720px, 138vw);
+  height: 88vh;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(38% 34% at 50% 42%, rgba(255, 218, 168, .22), transparent 74%),
+    radial-gradient(closest-side, rgba(255, 188, 118, .17), rgba(255, 130, 60, .045) 56%, transparent 76%);
+  filter: blur(9px);
+  animation: glow-breathe 6.5s ease-in-out infinite;
+}
+@keyframes glow-breathe {
+  0%, 100% { opacity: .85; }
+  50% { opacity: 1; }
+}
+
+/* 墙裙 / 地毯 --------------------------------------------------------- */
+.dado {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 26%;
+  background:
+    linear-gradient(180deg, #241410 0%, #1a0d0a 18%, #120807 100%);
+  border-top: 2px solid #3c2318;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 210, 160, .06),
+    0 -1px 0 rgba(201, 154, 74, .14);
+}
+.dado::before {
+  /* 墙裙木线 */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 26px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(201, 154, 74, .28), transparent);
+}
+.dado::after {
+  /* 墙裙下方的竖向护墙板 */
+  content: '';
+  position: absolute;
+  inset: 40px 0 0;
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .3) 0 2px, transparent 2px 46px);
+  opacity: .5;
+}
+
+.carpet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 15%;
+  background:
+    repeating-linear-gradient(115deg, rgba(0, 0, 0, .5) 0 11px, transparent 11px 26px),
+    repeating-linear-gradient(65deg, rgba(150, 24, 34, .12) 0 7px, transparent 7px 15px),
+    linear-gradient(180deg, #26090d 0%, #140508 60%, #0b0305 100%);
+  border-top: 2px solid #310f14;
+  box-shadow: inset 0 14px 26px rgba(0, 0, 0, .55);
+}
+.carpet::before {
+  /* 地毯上的菱形小花纹：压得很低，只当质感 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 170, 110, .035) 0 2px, transparent 2px 16px),
+    repeating-linear-gradient(-45deg, rgba(255, 170, 110, .028) 0 2px, transparent 2px 16px);
+  opacity: .7;
+}
+
+.floor-glow {
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  width: min(1400px, 120vw);
+  height: 46%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 190, 120, .16), rgba(255, 140, 70, .04) 50%, transparent 70%);
+  filter: blur(4px);
+}
+
+/* 放映机光柱 ---------------------------------------------------------- */
+.beam {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(255, 212, 164, .15) 0%,
+    rgba(255, 198, 138, .06) 28%,
+    rgba(255, 190, 130, .02) 58%,
+    transparent 84%
+  );
+  clip-path: polygon(48.9% 84%, 51.1% 84%, 78% 22%, 22% 22%);
+  filter: blur(38px);
+  mix-blend-mode: screen;
+  animation: beam-flicker 4.2s steps(2, jump-none) infinite;
+}
+.beam::before {
+  /* 中间更亮的一束 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(255, 226, 180, .09), transparent 64%);
+  clip-path: polygon(49.4% 84%, 50.6% 84%, 59% 28%, 41% 28%);
+  filter: blur(16px);
+}
+@keyframes beam-flicker {
+  0%, 88%, 100% { opacity: .95; }
+  89% { opacity: .62; }
+  93% { opacity: .88; }
+  95% { opacity: .5; }
+}
+
+.dust {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* 出口指示灯 ---------------------------------------------------------- */
+.exit-sign {
+  position: absolute;
+  left: 7%;
+  top: 9%;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 6px;
+  background: rgba(8, 22, 14, .85);
+  border: 1px solid rgba(90, 220, 150, .35);
+  box-shadow: 0 0 22px rgba(60, 255, 140, .12), inset 0 0 14px rgba(60, 255, 140, .08);
+  transform: rotate(-1deg);
+}
+.exit-en {
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: .18em;
+  color: #8dffb9;
+  text-shadow: 0 0 8px rgba(90, 255, 150, .7);
+}
+.exit-cn {
+  font-size: 9px;
+  color: rgba(150, 255, 190, .55);
+  letter-spacing: .1em;
+}
+
+/* 墙上的一页海报 ------------------------------------------------------ */
+.poster {
+  position: absolute;
+  left: 5.5%;
+  top: 21%;
+  z-index: 6;
+  width: clamp(150px, 15vw, 208px);
+  padding: 9px;
+  background: linear-gradient(180deg, #171018, #0a070b);
+  border: 2px solid #33221a;
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, .75),
+    0 0 0 1px rgba(255, 200, 120, .07),
+    0 0 46px rgba(255, 150, 70, .05);
+  transform: rotate(-1.4deg);
+}
+.poster::before,
+.poster::after {
+  /* 四角的透明胶带 */
+  content: '';
+  position: absolute;
+  width: 34px;
+  height: 12px;
+  background: rgba(230, 220, 196, .12);
+  border-left: 1px solid rgba(255, 255, 255, .06);
+  border-right: 1px solid rgba(255, 255, 255, .06);
+}
+.poster::before { left: -14px; top: 8px; transform: rotate(-32deg); }
+.poster::after { right: -14px; bottom: 10px; transform: rotate(-32deg); }
+
+.poster-inner {
+  border: 1px solid #3b2a20;
+  padding: 8px 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(180deg, #120e18, #08060b);
+}
+.poster-head {
+  font-family: var(--pixel);
+  font-size: 7px;
+  line-height: 1.7;
+  letter-spacing: .1em;
+  color: #f0e6d2;
+  display: flex;
+  flex-direction: column;
+}
+.poster-head span { color: var(--brass); font-size: 6px; letter-spacing: .26em; }
+.poster-art {
+  position: relative;
+  height: clamp(90px, 15vh, 138px);
+  overflow: hidden;
+  background: linear-gradient(180deg, #1a1436 0%, #2c1130 52%, #4d1622 76%, #100810 100%);
+  border: 1px solid rgba(255, 210, 150, .08);
+}
+.poster-sun {
+  position: absolute;
+  left: 50%;
+  top: 24%;
+  width: 66%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffe3a0 0%, #ffb05a 42%, #ff6a5e 70%, #a81e4c 100%);
+  box-shadow: 0 0 38px rgba(255, 150, 80, .5);
+}
+.poster-sun::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-linear-gradient(180deg, transparent 0 5px, rgba(20, 8, 18, .55) 5px 8px);
+  mask-image: linear-gradient(180deg, transparent 40%, #000 52%);
+}
+.poster-sea {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 46%;
+  background: repeating-linear-gradient(180deg, rgba(18, 8, 18, .92) 0 3px, transparent 3px 8px);
+}
+.poster-cn {
+  font-size: clamp(19px, 1.9vw, 24px);
+  letter-spacing: .3em;
+  text-align: center;
+  color: #f4e9d2;
+  text-shadow: 0 0 18px rgba(255, 170, 90, .25);
+}
+.poster-foot {
+  font-family: var(--pixel);
+  font-size: 5.5px;
+  letter-spacing: .2em;
+  color: rgba(201, 154, 74, .65);
+  text-align: center;
+}
+
+/* 墙上铭牌（海报下方的小牌子） --------------------------------------- */
+.plaque {
+  position: absolute;
+  left: 5.5%;
+  top: 56%;
+  z-index: 6;
+  width: clamp(150px, 15vw, 208px);
+  padding: 11px 12px 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 200, 130, .05), transparent 40%),
+    #14100c;
+  border: 2px solid #3a2a1c;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .7), inset 0 0 0 3px rgba(0, 0, 0, .3);
+}
+.plaque > .tag {
+  font-size: 6px;
+  color: var(--brass-dim);
+  border-color: rgba(201, 154, 74, .3);
+}
+.plaque-cn {
+  margin: 8px 0 9px;
+  font-size: 15px;
+  letter-spacing: .26em;
+  color: var(--cinema-ink);
+}
+.plaque-spec {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 8px;
+}
+.plaque-spec > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+  border-top: 1px solid rgba(201, 154, 74, .14);
+  padding-top: 4px;
+}
+.plaque-spec dt {
+  font-family: var(--pixel);
+  font-size: 5.5px;
+  letter-spacing: .1em;
+  color: var(--dimmer);
+}
+.plaque-spec dd {
+  margin: 0;
+  font-family: var(--pixel);
+  font-size: 6px;
+  color: var(--brass);
+}
+
+/* 座椅 ---------------------------------------------------------------- */
+.seats {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  z-index: 7;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: clamp(10px, 1.6vw, 28px);
+  pointer-events: none;
+}
+.seat {
+  position: relative;
+  width: clamp(96px, 10.8vw, 162px);
+  height: clamp(90px, 15.5vh, 150px);
+  flex: 0 0 auto;
+}
+/* 靠背：顶上带一点拱形，像是从后排看过去 */
+.seat-back {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: 0;
+  bottom: 0;
+  border-radius: 46% 46% 6px 6px / 22% 22% 6px 6px;
+  background:
+    radial-gradient(120% 42% at 50% -8%, rgba(255, 208, 156, .17), transparent 72%),
+    linear-gradient(180deg, rgba(150, 180, 215, .06), transparent 16%),
+    linear-gradient(180deg, #130d11 0%, #0a0708 70%, #050406 100%);
+  border-top: 1px solid rgba(255, 214, 170, .2);
+  box-shadow:
+    inset 0 2px 0 rgba(190, 215, 240, .06),
+    inset 0 -34px 34px rgba(0, 0, 0, .72),
+    0 0 0 2px #1a1116,
+    0 -3px 18px rgba(255, 190, 130, .06),
+    0 18px 38px rgba(0, 0, 0, .85);
+}
+/* 靠背上的软包 */
+.seat-back::before {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 12%;
+  bottom: 28%;
+  border-radius: 42% 42% 6px 6px / 26% 26% 6px 6px;
+  background:
+    radial-gradient(120% 46% at 50% -10%, rgba(255, 206, 152, .1), transparent 72%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #191219 0%, #0c090c 62%, #080607 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(190, 215, 240, .11),
+    inset 0 -10px 14px rgba(0, 0, 0, .55);
+}
+/* 靠背与坐垫的暗缝 */
+.seat-back::after {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 16%;
+  height: 3px;
+  background: rgba(0, 0, 0, .75);
+  box-shadow: 0 2px 0 rgba(255, 190, 130, .05);
+}
+/* 两侧扶手 */
+.seat-arm {
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 48%;
+  background: linear-gradient(180deg, #24161c 0%, #0d080a 55%, #060405 100%);
+  border-radius: 5px 5px 2px 2px;
+  box-shadow: inset 0 1px 0 rgba(190, 215, 240, .13), 0 6px 14px rgba(0, 0, 0, .6);
+}
+.seat-arm.l { left: 0; }
+.seat-arm.r { right: 0; }
+.aisle {
+  width: clamp(150px, 19vw, 300px);
+}
+
+/* 放映机 -------------------------------------------------------------- */
+.projector {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(10px, 1.8vh, 22px);
+  transform: translateX(-50%);
+  z-index: 8;
+  width: clamp(152px, 15.4vw, 218px);
+  pointer-events: none;
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, .85));
+}
+.proj-halo {
+  /* 机身后面漏出来的镜头光：很淡，只托一层暖边 */
+  position: absolute;
+  left: -26%;
+  right: -26%;
+  top: -18%;
+  bottom: 10%;
+  background: radial-gradient(ellipse at 50% 46%, rgba(255, 186, 112, .16), rgba(255, 150, 80, .04) 54%, transparent 74%);
+  filter: blur(16px);
+  z-index: -1;
+}
+.proj-reels {
+  position: relative;
+  height: clamp(58px, 7.4vh, 84px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+}
+.reel-disc {
+  position: relative;
+  display: block;
+  width: clamp(60px, 6.4vw, 86px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid #2a171d;
+  background:
+    radial-gradient(circle at 50% 50%, #0a0708 0 17%, transparent 18%),
+    repeating-conic-gradient(from 14deg, #221419 0 9deg, #0a0709 9deg 40deg);
+  box-shadow:
+    inset 0 0 0 3px #0b0709,
+    inset 0 0 22px rgba(0, 0, 0, .9),
+    0 -2px 10px rgba(255, 186, 120, .12);
+}
+.reel-disc::after {
+  content: '';
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  border: 2px solid #2c1b21;
+  background: radial-gradient(circle, #130c10, #070406);
+}
+.reel-disc.small {
+  width: clamp(42px, 4.6vw, 62px);
+  margin-top: clamp(16px, 2.2vh, 26px);
+}
+.proj-barrel {
+  /* 朝银幕那头的镜头筒，从机顶伸出来一点，端头有一圈镜头光 */
+  position: absolute;
+  left: 22%;
+  top: -15px;
+  width: 24%;
+  height: 17px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #1a1016 0%, #0a0608 100%);
+  border: 2px solid #241419;
+  border-bottom: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 200, 140, .1);
+}
+.proj-barrel::before {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: -3px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #ffe9bc, transparent);
+  box-shadow: 0 0 14px 4px rgba(255, 190, 110, .4);
+}
+/* 机身左侧的两个调节旋钮 */
+.proj-dial {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a2830, #0a0608 70%);
+  box-shadow: 0 0 0 1px #241419, 0 0 10px rgba(255, 180, 100, .1);
+}
+.proj-dial.d1 { left: 42px; }
+.proj-dial.d2 { left: 57px; }
+.proj-body {
+  position: relative;
+  height: clamp(38px, 4.8vh, 54px);
+  border-radius: 4px 4px 10px 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 196, 130, .1), transparent 26%),
+    linear-gradient(180deg, #221521 0%, #0f0a0d 58%, #070406 100%);
+  border: 2px solid #2b191f;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 140, .13),
+    inset 0 -14px 18px rgba(0, 0, 0, .6),
+    0 0 32px rgba(0, 0, 0, .9);
+}
+.proj-vent {
+  /* 右侧散热格栅 */
+  position: absolute;
+  right: 9px;
+  top: 8px;
+  bottom: 8px;
+  width: 34%;
+  background: repeating-linear-gradient(0deg, rgba(255, 196, 130, .09) 0 1px, transparent 1px 4px);
+  opacity: .8;
+}
+.proj-lens {
+  /* 面向银幕的镜头，在机身顶部漏出一线强光 */
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 46%;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: 3px;
+  background: radial-gradient(ellipse at 50% 50%, #fff3cf, #ffa63c 52%, transparent 76%);
+  box-shadow:
+    0 0 22px 7px rgba(255, 176, 92, .34),
+    0 0 66px 24px rgba(255, 150, 70, .14);
+  animation: lens-glow 5s steps(2, jump-none) infinite;
+}
+@keyframes lens-glow {
+  0%, 100% { opacity: 1; }
+  47% { opacity: .72; }
+}
+.proj-led {
+  position: absolute;
+  left: 10px;
+  bottom: 9px;
+  width: 4px;
+  height: 4px;
+  background: #ff5a4a;
+  box-shadow: 0 0 8px 2px rgba(255, 90, 70, .7);
+  animation: led-blink 3.4s steps(2, jump-none) infinite;
+}
+@keyframes led-blink {
+  0%, 88%, 100% { opacity: 1; }
+  92% { opacity: .15; }
+}
+.proj-brand {
+  position: absolute;
+  left: 18px;
+  bottom: 8px;
+  font-family: var(--pixel);
+  font-size: 5px;
+  letter-spacing: .14em;
+  color: rgba(201, 154, 74, .42);
+}
+.proj-foot {
+  display: block;
+  width: 52%;
+  height: 6px;
+  margin: 0 auto;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #1a1116, #060405);
+}
+
+/* 顶部 / 底部 HUD ----------------------------------------------------- */
+.lobby .hud { z-index: 40; }
+.lobby .hud.bottom {
+  background: linear-gradient(0deg, rgba(4, 5, 9, .82) 0%, rgba(4, 5, 9, .45) 55%, transparent 100%);
+  padding-top: 26px;
+  padding-bottom: 16px;
+}
+.hud-dot { color: var(--dimmer); }
+.tag-wide { letter-spacing: .08em; }
+
+/* 舞台布局 ------------------------------------------------------------ */
+.stage {
+  position: absolute;
+  left: 50%;
+  top: clamp(84px, 15vh, 150px);
+  transform: translateX(-50%);
+  width: min(1440px, 100%);
+  padding: 36px clamp(18px, 2.2vw, 40px) 0;
+  display: grid;
+  grid-template-columns: minmax(0, 236px) minmax(0, 1fr) minmax(0, 236px);
+  gap: clamp(16px, 2.2vw, 32px);
+  align-items: start;
+}
+
+/* 左栏：提示 + 海报 + 铭牌 */
+.rail-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(10px, 1.6vh, 18px);
+  padding-top: clamp(6px, 1.2vh, 14px);
+}
+/* 中间：银幕槽位（真实银幕是 fixed 的，这里只负责占位） */
+.proscenium {
+  position: relative;
+  width: 100%;
+}
+.screen-slot {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 7px;
+  background: #050405;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .8);
+}
+
+/* 银幕紧贴边框的一圈光晕：让墙看起来是被屏幕照亮的 */
+.proscenium::before {
+  content: '';
+  position: absolute;
+  inset: -46px -52px -54px;
+  background: radial-gradient(closest-side, rgba(255, 208, 150, .3), rgba(255, 160, 90, .09) 62%, transparent 80%);
+  filter: blur(22px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 银幕在墙脚 / 地毯上的一圈暖光 */
+.proscenium::after {
+  content: '';
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: -46px;
+  height: 78px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 186, 110, .22), rgba(255, 150, 80, .05) 55%, transparent 74%);
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+/* 丝绒帘头 */
+.cornice {
+  position: absolute;
+  left: -18px;
+  right: -18px;
+  top: -30px;
+  height: 32px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 45%),
+    repeating-linear-gradient(90deg, #38080f 0 7px, #6b1521 7px 15px, #450b12 15px 22px, #7d1c28 22px 27px);
+  border-bottom: 2px solid #7d1c28;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .6);
+}
+.cornice::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 3px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, rgba(201, 154, 74, .55) 0 2px, transparent 2px 12px);
+  opacity: .55;
+}
+.cornice::after {
+  /* 流苏 */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 9px;
+  background: repeating-linear-gradient(90deg, #7d1c28 0 3px, transparent 3px 9px);
+  opacity: .85;
+}
+.cornice-sign {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .62em;
+  text-indent: .62em;
+  color: rgba(255, 220, 172, .82);
+  text-shadow: 0 0 14px rgba(255, 170, 90, .55), 0 1px 0 rgba(0, 0, 0, .85);
+  white-space: nowrap;
+}
+
+.screen-hint {
+  margin-top: clamp(26px, 4.6vh, 44px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  font-family: var(--pixel);
+  font-size: 7.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #a69c88;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .8);
+}
+.screen-hint .cjk { font-size: 9.5px; letter-spacing: .18em; color: var(--ink-2); }
+.hint-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--amber);
+  box-shadow: 0 0 10px rgba(255, 200, 110, .8);
+  animation: caret-blink 1.6s steps(2, jump-none) infinite;
+}
+.hint-sep { color: var(--dimmer); }
+.hint-en { color: var(--dimmer); }
+
+/* 右栏：NOW SHOWING 排片牌 -------------------------------------------- */
+.rail-right { padding-top: clamp(4px, 1vh, 12px); }
+
+.showtimes {
+  position: relative;
+  padding: 14px 13px 11px;
+  background:
+    linear-gradient(180deg, rgba(255, 200, 130, .05), transparent 30%),
+    linear-gradient(180deg, #1c1310 0%, #120b09 100%);
+  border: 2px solid #3e2619;
+  box-shadow:
+    0 0 0 5px rgba(0, 0, 0, .45),
+    0 0 0 6px rgba(201, 154, 74, .16),
+    0 26px 60px rgba(0, 0, 0, .75),
+    0 0 60px rgba(255, 160, 80, .05);
+}
+.showtimes::before {
+  /* 排片牌的四个角钉 */
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(201, 154, 74, .14);
+  pointer-events: none;
+}
+.st-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.st-kicker {
+  font-family: var(--pixel);
+  font-size: 6.5px;
+  letter-spacing: .16em;
+  color: var(--amber);
+  text-shadow: 0 0 14px rgba(255, 190, 100, .35);
+}
+.st-count {
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: .06em;
+  color: var(--ink);
+}
+.st-rule {
+  height: 1px;
+  margin: 9px 0 7px;
+  background: linear-gradient(90deg, rgba(201, 154, 74, .55), rgba(201, 154, 74, .06));
+}
+.st-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.st-row {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 5px 4px;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: background .1s steps(2), border-color .1s steps(2), color .1s steps(2);
+}
+.st-row:hover,
+.st-row:focus-visible {
+  background: rgba(255, 196, 110, .09);
+  border-left-color: var(--amber);
+  color: #fff;
+  outline: none;
+}
+.st-row .n {
+  font-family: var(--pixel);
+  font-size: 6.5px;
+  color: var(--brass-dim);
+  letter-spacing: .04em;
+}
+.st-row .nm {
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: .06em;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-row .cn {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: #9b9384;
+  transition: color .1s steps(2);
+}
+.st-row:hover .cn { color: #cfc6b2; }
+.st-row .go {
+  font-size: 6px;
+  color: var(--amber);
+  opacity: 0;
+  transition: opacity .1s steps(2);
+}
+.st-row:hover .go { opacity: 1; }
+.st-row[data-hot="1"] .n { color: var(--amber); }
+
+.st-foot {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(201, 154, 74, .14);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--pixel);
+  font-size: 5.5px;
+  letter-spacing: .1em;
+  color: var(--dimmer);
+}
+.st-tip { font-size: 8px; letter-spacing: .12em; color: var(--brass-dim); }
+
+/* =====================================================================
+   3. 放映模式 HUD
+   ===================================================================== */
+.screening {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .34s ease, visibility 0s linear .34s;
+  /* 电影画面上下压暗，HUD 才压得住任何一卷的颜色 */
+  background:
+    linear-gradient(180deg, rgba(2, 4, 8, .72) 0%, rgba(2, 4, 8, .3) 12%, transparent 22%),
+    linear-gradient(0deg, rgba(2, 4, 8, .74) 0%, rgba(2, 4, 8, .3) 12%, transparent 22%);
+}
+html.hud-on .screening {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .34s ease;
+}
+
+.s-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  pointer-events: none;
+}
+.s-top { top: 0; }
+.s-bottom { bottom: 0; align-items: flex-end; }
+/* 只有按钮真的可以点，其余点击穿透到银幕（点画面换卷） */
+.s-hud button { pointer-events: auto; }
+
+/* 左上：当前卷信息 */
+.reel-card {
+  position: relative;
+  min-width: 190px;
+  padding: 13px 16px 12px;
+  background: linear-gradient(180deg, rgba(4, 8, 14, .93), rgba(3, 6, 10, .78));
+  border-left: 2px solid var(--cyan);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .7), 0 0 0 1px rgba(92, 236, 212, .1);
+  backdrop-filter: blur(7px);
+}
+.reel-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: .14em;
+  color: var(--dim);
+}
+.reel-key { color: var(--dimmer); }
+.reel-no {
+  font-family: var(--pixel);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--cyan);
+  text-shadow: 0 0 18px rgba(92, 236, 212, .45);
+}
+.reel-total { font-size: 8px; color: var(--dimmer); }
+.reel-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 6px;
+  letter-spacing: .16em;
+  color: var(--red);
+}
+.reel-live i {
+  width: 5px;
+  height: 5px;
+  background: var(--red);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 90, 90, .8);
+  animation: led-blink 1.7s steps(2, jump-none) infinite;
+}
+.reel-name {
+  margin-top: 8px;
+  font-family: var(--pixel);
+  font-size: 12px;
+  letter-spacing: .06em;
+  line-height: 1.6;
+  color: var(--ink-reel);
+  text-shadow: 0 0 22px rgba(140, 220, 255, .25);
+}
+.reel-cn {
+  margin-top: 3px;
+  font-size: 13px;
+  letter-spacing: .24em;
+  color: var(--cyan);
+}
+.reel-hint {
+  margin-top: 5px;
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--dim);
+}
+.reel-dots {
+  display: flex;
+  gap: 3px;
+  margin-top: 10px;
+}
+.reel-dots i {
+  width: 16px;
+  height: 3px;
+  background: rgba(140, 170, 200, .18);
+  transition: background .18s steps(2), box-shadow .18s steps(2);
+}
+.reel-dots i.on {
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgba(92, 236, 212, .55);
+}
+.reel-dots i.past { background: rgba(92, 236, 212, .32); }
+
+/* 右上：按钮组 */
+.s-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  pointer-events: none;
+}
+.s-btn {
+  background: rgba(4, 8, 14, .9);
+  border-color: rgba(120, 150, 180, .42);
+  backdrop-filter: blur(6px);
+  color: var(--ink-2);
+  font-size: 7.5px;
+  letter-spacing: .1em;
+  padding: 9px 11px 8px;
+  backdrop-filter: blur(2px);
+}
+.s-btn:hover { background: var(--ink); color: #06110e; border-color: var(--ink); }
+.s-btn kbd { font-size: 6px; padding: 2px 3px 1px; margin-left: 4px; }
+#soundBtn.on { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 18px rgba(92, 236, 212, .18); }
+
+/* 左下：操作提示 */
+.s-hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 14px;
+  padding: 9px 13px;
+  background: linear-gradient(180deg, rgba(4, 8, 14, .9), rgba(3, 6, 10, .74));
+  backdrop-filter: blur(6px);
+  border-left: 2px solid rgba(255, 200, 110, .45);
+  font-family: var(--pixel);
+  font-size: 6.5px;
+  letter-spacing: .1em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.s-hints kbd { font-size: 6px; padding: 3px 4px 2px; color: var(--ink-2); border-color: rgba(150, 180, 210, .4); }
+.s-hints span { display: inline-flex; align-items: center; gap: 5px; }
+.s-touch { display: none !important; }
+.s-hints-dim { font-size: 10px; color: var(--dimmer); letter-spacing: .14em; }
+
+/* 右下：时间码 */
+.s-time {
+  text-align: right;
+  padding: 8px 12px 7px;
+  background: linear-gradient(180deg, rgba(4, 8, 14, .9), rgba(3, 6, 10, .74));
+  backdrop-filter: blur(6px);
+  border-right: 2px solid var(--cyan);
+}
+.tc {
+  font-family: var(--term);
+  font-size: clamp(24px, 2.6vw, 34px);
+  line-height: 1;
+  letter-spacing: .04em;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 20px rgba(92, 236, 212, .35);
+}
+.tc-meta {
+  margin-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  font-family: var(--pixel);
+  font-size: 6px;
+  letter-spacing: .12em;
+  color: var(--dim);
+}
+
+/* 换卷 toast */
+.reel-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 15%;
+  transform: translate(-50%, 12px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  opacity: 0;
+  transition: opacity .18s ease, transform .18s var(--ease-hop);
+  background: rgba(5, 9, 14, .8);
+  border: 1px solid rgba(92, 236, 212, .3);
+  box-shadow: 0 0 40px rgba(0, 0, 0, .8);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.reel-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.rt-no {
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: .12em;
+  color: var(--amber);
+}
+.rt-bar { width: 22px; height: 1px; background: rgba(255, 200, 110, .4); }
+.rt-name {
+  font-family: var(--pixel);
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--ink-reel);
+}
+.rt-cn { font-size: 12px; letter-spacing: .2em; color: var(--cyan); }
+
+/* =====================================================================
+   4. 响应式
+   ===================================================================== */
+
+/* 中等宽度：收窄两侧栏 */
+@media (max-width: 1180px) {
+  .stage {
+    grid-template-columns: minmax(0, 196px) minmax(0, 1fr) minmax(0, 196px);
+    gap: 18px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .poster { width: clamp(140px, 15vw, 176px); }
+  .st-row .nm { font-size: 6.5px; }
+}
+
+/* 再窄一点：墙上海报 / 铭牌会压到银幕，收起来只留画面和排片牌 */
+@media (max-width: 1240px) {
+  .poster, .plaque { display: none; }
+}
+
+/* 窄屏 / 竖屏平板：单列，排片牌变成两列贴片 */
+@media (max-width: 980px) {
+  .stage {
+    left: 0;
+    top: 0;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    padding: clamp(58px, 8vh, 84px) 18px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(12px, 2.2vh, 22px);
+    overflow: hidden;
+  }
+  .rail-left { display: none; }
+  .exit-sign { display: none; }
+  .proscenium {
+    width: min(100%, 760px);
+    flex: 0 0 auto;
+  }
+  .rail-right {
+    width: min(100%, 760px);
+    padding-top: 0;
+    flex: 0 0 auto;
+  }
+  .cornice { top: -22px; height: 24px; left: -10px; right: -10px; }
+  .cornice::after { height: 7px; }
+  .screen-hint { margin-top: 20px; }
+
+  /* 排片牌横向排列 */
+  .showtimes { padding: 11px 12px 9px; }
+  .st-head { align-items: center; }
+  .st-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px 6px;
+  }
+  .st-row { grid-template-columns: 16px minmax(0, 1fr); padding: 4px 4px 3px; }
+  .st-row .go { display: none; }
+  .st-row .cn { display: none; }
+  .st-row .nm { font-size: 6px; }
+  .st-row .n { font-size: 6px; }
+  .st-foot { flex-direction: row; justify-content: space-between; margin-top: 7px; padding-top: 6px; }
+  .st-tip { font-size: 7px; }
+
+  /* 前景缩小：座椅、放映机贴着底部 */
+  .seat { width: clamp(66px, 9vw, 108px); height: clamp(54px, 9vh, 82px); }
+  .seat-back { left: 5px; right: 5px; }
+  .seat-arm { width: 8px; }
+  .aisle { width: clamp(110px, 22vw, 210px); }
+  .projector { bottom: 10px; width: clamp(112px, 15vw, 150px); }
+  .proj-reels { height: clamp(34px, 5.4vh, 50px); }
+  .proj-body { height: clamp(26px, 3.8vh, 36px); }
+
+  /* HUD 收一收 */
+  .s-hud { padding: 12px 14px; }
+  .reel-card { min-width: 0; padding: 10px 12px 9px; }
+  .reel-no { font-size: 18px; }
+  .reel-name { font-size: 10px; margin-top: 6px; }
+  .reel-cn { font-size: 11px; }
+  .reel-hint { display: none; }
+  .reel-dots i { width: 12px; }
+  .s-hints { font-size: 6px; gap: 6px 10px; padding: 7px 10px; }
+  .s-hints-dim { display: none; }
+  .s-time { padding: 6px 10px; }
+  .tc { font-size: clamp(20px, 4.4vw, 28px); }
+  .reel-toast { bottom: 17%; padding: 8px 12px; }
+}
+
+/* 平板竖屏：单列布局下下半屏太空，补一张海报 */
+@media (max-width: 980px) and (min-height: 880px) {
+  .poster {
+    display: block;
+    left: 50%;
+    top: auto;
+    bottom: clamp(150px, 19vh, 230px);
+    width: clamp(150px, 21vw, 188px);
+    transform: translateX(-50%) rotate(-1.4deg);
+    z-index: 6;
+  }
+  .poster-art { height: clamp(92px, 12.5vh, 126px); }
+  .poster-cn { font-size: clamp(19px, 2.2vw, 23px); }
+}
+
+/* 手机：390×844 */
+@media (max-width: 720px) {
+  html { --bezel: 8px; --expand: 480ms; }
+
+  .hud.top { padding: max(12px, env(safe-area-inset-top)) 14px 0; }
+  .hud.bottom { padding: 0 14px max(10px, env(safe-area-inset-bottom)); }
+  .hud-group { gap: 8px; }
+  .tag-wide { display: none; }
+
+  .stage {
+    padding: max(56px, calc(env(safe-area-inset-top) + 46px)) 14px 0;
+    gap: 10px;
+  }
+  .cornice { display: none; }
+  .screen-hint { margin-top: 16px; font-size: 6px; gap: 6px; }
+  .screen-hint .cjk { font-size: 9px; }
+  .hint-en, .hint-sep { display: none; }
+
+  /* 排片牌：两列，行高更大，好点 */
+  .rail-right { width: 100%; }
+  .showtimes { padding: 10px 10px 8px; }
+  .st-kicker { font-size: 6px; }
+  .st-count { font-size: 8px; }
+  .st-rule { margin: 7px 0 5px; }
+  .st-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+  }
+  .st-row { padding: 6px 5px 5px; grid-template-columns: 18px minmax(0, 1fr); }
+  .st-row .n { font-size: 6.5px; }
+  .st-row .nm { font-size: 7px; }
+  .st-row .cn { display: block; font-size: 8.5px; margin-top: 2px; }
+  .st-foot { flex-direction: row; justify-content: space-between; }
+  .st-foot > span:first-child { font-size: 5px; }
+  .st-tip { font-size: 7px; }
+
+  /* 前景：加大一点，下半屏别空 */
+  .seat { width: clamp(60px, 18vw, 88px); height: clamp(84px, 13vh, 116px); }
+  .seat-back { left: 4px; right: 4px; }
+  .seat-arm { width: 7px; height: 44%; }
+  .seats { gap: 6px; bottom: -10px; }
+  .aisle { width: clamp(118px, 33vw, 156px); }
+  .projector { bottom: 4px; width: clamp(104px, 28vw, 124px); }
+  .proj-reels { height: 42px; }
+  .reel-disc { width: 50px; }
+  .reel-disc.small { width: 36px; margin-top: 12px; }
+  .proj-body { height: 28px; }
+  .proj-barrel { top: -12px; width: 26%; height: 14px; }
+  .proj-brand, .proj-dial { display: none; }
+
+  /* 墙上再挂一张小海报，正好填住排片牌和座椅之间那块墙 */
+  .poster {
+    display: block;
+    left: 50%;
+    top: auto;
+    bottom: clamp(112px, 15vh, 140px);
+    width: clamp(120px, 32vw, 148px);
+    padding: 7px;
+    transform: translateX(-50%) rotate(-1.2deg);
+    z-index: 6;
+  }
+  .poster-inner { padding: 6px 5px 7px; gap: 6px; }
+  .poster-head { font-size: 5.5px; }
+  .poster-head span { font-size: 4.5px; }
+  .poster-art { height: clamp(62px, 9vh, 76px); }
+  .poster-cn { font-size: 16px; letter-spacing: .28em; }
+  .poster-foot { display: none; }
+  .poster::before, .poster::after { width: 24px; height: 9px; }
+  .exit-sign, .plaque { display: none; }
+
+  .beam {
+    clip-path: polygon(48.4% 88%, 51.6% 88%, 68% 24%, 32% 24%);
+    background: linear-gradient(to top, rgba(255, 214, 160, .14), rgba(255, 200, 140, .05) 40%, transparent 86%);
+    filter: blur(20px);
+  }
+  .floor-glow, .wall-glow { opacity: .85; }
+
+  /* 大厅 HUD 收成一行 */
+  .lobby .hud.bottom .hud-group:first-child { display: none; }
+  .lobby .hud.bottom { justify-content: space-between; }
+  .lobby .hud.bottom .hud-group:last-child { gap: 10px; }
+
+  /* 放映 HUD：竖排按钮，避免和卷信息打架 */
+  .s-hud { padding: max(10px, env(safe-area-inset-top)) 10px 10px; gap: 8px; }
+  .s-bottom { padding: 0 10px max(10px, env(safe-area-inset-bottom)); }
+  .reel-card { padding: 8px 10px 7px; min-width: 0; }
+  .reel-no { font-size: 15px; }
+  .reel-name { font-size: 8.5px; margin-top: 5px; }
+  .reel-cn { font-size: 10px; letter-spacing: .18em; }
+  .reel-dots { margin-top: 7px; gap: 2px; }
+  .reel-dots i { width: 9px; height: 2px; }
+  .reel-live { font-size: 5px; }
+  .s-actions { gap: 5px; }
+  .s-btn { padding: 7px 8px 6px; font-size: 6.5px; }
+  .s-btn kbd { display: none; }
+  .s-hints { padding: 6px 9px; font-size: 5.5px; gap: 5px 8px; max-width: 62vw; }
+  .s-hints .s-key, .s-hints-dim { display: none !important; }
+  .s-touch { display: inline-flex !important; font-size: 10px; letter-spacing: .16em; color: var(--dim); }
+  .s-time { padding: 5px 8px; }
+  .tc { font-size: 19px; }
+  .tc-meta { font-size: 5px; gap: 6px; }
+  .tc-meta .dim { display: none; }
+  .reel-toast { bottom: 13%; padding: 7px 10px; gap: 7px; }
+  .rt-name { font-size: 8px; }
+  .rt-cn { font-size: 10px; }
+  .rt-bar { width: 12px; }
+}
+
+/* 矮屏手机：海报会压到排片牌，藏掉 */
+@media (max-width: 720px) and (max-height: 760px) {
+  .poster { display: none; }
+}
+
+/* 很矮的窗口（横屏手机 / 小笔记本）：别让舞台顶到 HUD */
+@media (max-height: 620px) and (min-width: 721px) {
+  .stage { top: clamp(64px, 10vh, 90px); padding-top: 28px; }
+  .poster { display: none; }
+  .screen-hint { margin-top: 20px; }
+  .seat { height: clamp(52px, 10vh, 80px); }
+}
+
+/* 不用鼠标的设备：弱化 hover 反馈 */
+@media (hover: none) {
+  .st-row:hover { background: transparent; border-left-color: transparent; color: var(--ink-2); }
+  .st-row:hover .go { opacity: 0; }
+}
+
+/* 减少动效 */
+@media (prefers-reduced-motion: reduce) {
+  html { --expand: 1ms; }
+  .testcard { animation: none !important; }
+  .bulb::after,
+  .to-play,
+  .to-play .caret,
+  .hint-dot,
+  .wall-glow,
+  .beam,
+  .proj-lens,
+  .proj-led,
+  .reel-live i,
+  .poster-sun::after { animation: none !important; }
+  .reel-toast { transition: none; }
+}

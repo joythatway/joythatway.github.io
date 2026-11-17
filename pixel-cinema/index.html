@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JOYTHATWAY PICTURES · 像素放映室 · 方向①</title>
+<meta name="description" content="JOYTHATWAY 个人站重做方向①：一间像素影院大厅 + 8 卷全屏像素胶片的放映模式。">
+<meta name="theme-color" content="#06070d">
+<link rel="icon" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="./style.css">
+<script>
+  /* 带 ?screening=1 直接进放映：先给 <html> 打标记，避免大厅闪一下 */
+  (function () {
+    try {
+      var s = new URLSearchParams(location.search).get('screening');
+      if (s === '1' || s === 'true') document.documentElement.classList.add('boot-screening');
+    } catch (e) { /* 老浏览器就算了 */ }
+  })();
+</script>
+</head>
+<body>
+
+<!-- =====================================================================
+     银幕：始终 fixed 定位。大厅里由 JS 贴在大厅的槽位上，
+     点击后直接飞成全屏（不换 DOM，所以过渡很干净）。
+     ===================================================================== -->
+<div class="screen" id="screen" role="button" tabindex="0" aria-label="点击银幕开始放映">
+  <!-- 画框：像素跑马灯 + 剧院边框（全屏时淡出） -->
+  <div class="frame" aria-hidden="true">
+    <div class="frame-inner"></div>
+    <div class="marquee marquee-top" id="marqueeTop"></div>
+    <div class="marquee marquee-bottom" id="marqueeBottom"></div>
+    <span class="fx-corner tl"></span>
+    <span class="fx-corner tr"></span>
+    <span class="fx-corner bl"></span>
+    <span class="fx-corner br"></span>
+  </div>
+
+  <div class="glass" id="glass">
+    <!-- 大厅测试卡（192×108 低分辨率） -->
+    <canvas class="layer testcard" id="testcard" width="192" height="108"></canvas>
+    <!-- 放映引擎画布（192×108，全屏时按 cover 放大） -->
+    <canvas class="layer reels" id="reelCanvas" width="192" height="108"></canvas>
+
+    <!-- 测试卡上叠的文案：只有按 PLAY 才会消失 -->
+    <div class="test-overlay" id="testOverlay">
+      <div class="to-top">
+        <div class="to-brand">
+          <span class="to-mark" aria-hidden="true"></span>
+          JOYTHATWAY PICTURES
+        </div>
+        <span class="tag to-tag">TEST CARD 01 · 16:9</span>
+      </div>
+
+      <div class="to-center">
+        <div class="to-kicker cjk">现在放映 · NOW SHOWING</div>
+        <div class="to-play" id="playText">CLICK TO PLAY<span class="caret">_</span></div>
+        <div class="to-cn cjk">点击银幕 · 开始放映</div>
+        <button class="btn to-btn" id="playBtn" type="button">
+          <span class="play-tri" aria-hidden="true"></span> PRESS PLAY
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 3-2-1 胶片倒数 -->
+    <div class="countdown" id="countdown" aria-hidden="true">
+      <canvas id="countdownCanvas" width="480" height="270"></canvas>
+    </div>
+
+    <!-- 玻璃反光 / 暗角 / 扫描线 -->
+    <div class="glass-fx" aria-hidden="true"></div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     影院大厅
+     ===================================================================== -->
+<div class="lobby" id="lobby">
+
+  <!-- 房间：墙 / 墙裙 / 地毯 / 光 / 家具剪影 -->
+  <div class="room" aria-hidden="true">
+    <div class="wall"></div>
+    <div class="wall-glow"></div>
+    <div class="floor-glow"></div>
+    <div class="dado"></div>
+    <div class="carpet"></div>
+    <div class="beam"></div>
+    <canvas class="dust" id="dustCanvas"></canvas>
+
+    <div class="exit-sign">
+      <span class="exit-en">EXIT</span>
+      <span class="exit-cn cjk">出口</span>
+    </div>
+
+    <div class="poster">
+      <div class="poster-inner">
+        <div class="poster-head">JOYTHATWAY<span>PICTURES</span></div>
+        <div class="poster-art"><i class="poster-sun"></i><i class="poster-sea"></i></div>
+        <div class="poster-cn cjk">要多想</div>
+        <div class="poster-foot">ONE SHEET · 2026</div>
+      </div>
+    </div>
+
+    <div class="plaque panel">
+      <span class="tag">SCREENING ROOM</span>
+      <div class="plaque-cn cjk">像素放映室</div>
+      <dl class="plaque-spec">
+        <div><dt>REELS</dt><dd>8</dd></div>
+        <div><dt>RES</dt><dd>192×108</dd></div>
+        <div><dt>FPS</dt><dd>30</dd></div>
+        <div><dt>AUTO</dt><dd>22S</dd></div>
+      </dl>
+    </div>
+
+    <!-- 座椅：中间留过道，放映机坐那儿 -->
+    <div class="seats">
+      <div class="seat"><i class="seat-back"></i><i class="seat-arm l"></i><i class="seat-arm r"></i></div>
+      <div class="seat"><i class="seat-back"></i><i class="seat-arm l"></i><i class="seat-arm r"></i></div>
+      <div class="seat"><i class="seat-back"></i><i class="seat-arm l"></i><i class="seat-arm r"></i></div>
+      <div class="aisle"></div>
+      <div class="seat"><i class="seat-back"></i><i class="seat-arm l"></i><i class="seat-arm r"></i></div>
+      <div class="seat"><i class="seat-back"></i><i class="seat-arm l"></i><i class="seat-arm r"></i></div>
+      <div class="seat"><i class="seat-back"></i><i class="seat-arm l"></i><i class="seat-arm r"></i></div>
+    </div>
+
+    <div class="projector">
+      <div class="proj-halo"></div>
+      <div class="proj-reels">
+        <i class="reel-disc big"></i>
+        <i class="reel-disc small"></i>
+      </div>
+      <div class="proj-body">
+        <i class="proj-barrel"></i>
+        <i class="proj-vent"></i>
+        <i class="proj-dial d1"></i>
+        <i class="proj-dial d2"></i>
+        <i class="proj-lens"></i>
+        <i class="proj-led"></i>
+        <span class="proj-brand">JTW 8MM</span>
+      </div>
+      <i class="proj-foot"></i>
+    </div>
+  </div>
+
+  <!-- 顶部 HUD -->
+  <header class="hud top lobby-hud">
+    <a class="brand" href="../index.html">
+      <span class="mark" aria-hidden="true"></span>JOYTHATWAY PICTURES
+    </a>
+    <div class="hud-group">
+      <span class="tag">DIRECTION 01</span>
+      <span class="tag dim tag-wide">PIXEL SCREENING ROOM</span>
+    </div>
+  </header>
+
+  <!-- 舞台：左信息区 · 银幕槽 · 右排片牌 -->
+  <div class="stage">
+    <!-- 左栏留白，给银幕呼吸（墙上装饰在海报 / 铭牌位置：见 .room） -->
+    <aside class="rail rail-left" aria-hidden="true"></aside>
+
+    <div class="proscenium">
+      <div class="cornice" aria-hidden="true"><i class="cornice-sign cjk">要多想</i></div>
+      <div class="screen-slot" id="screenSlot"></div>
+      <div class="screen-hint">
+        <span class="hint-dot" aria-hidden="true"></span>
+        <span class="cjk">点击银幕开始放映</span>
+        <span class="hint-sep">/</span>
+        <span class="hint-en">CLICK SCREEN TO PLAY</span>
+      </div>
+    </div>
+
+    <aside class="rail rail-right">
+      <div class="showtimes" id="showtimes">
+        <div class="st-head">
+          <span class="st-kicker">NOW SHOWING</span>
+          <span class="st-count">8 REELS</span>
+        </div>
+        <div class="st-rule" aria-hidden="true"></div>
+        <ul class="st-list" id="showtimesList"></ul>
+        <div class="st-foot">
+          <span>AUTO · 22S / REEL</span>
+          <span class="st-tip cjk">点任意一卷直接放映</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 底部 HUD -->
+  <footer class="hud bottom lobby-hud">
+    <div class="hud-group">
+      <span class="dim cjk">点击银幕开始放映</span>
+      <span class="hud-dot" aria-hidden="true">·</span>
+      <span class="dim">8 卷像素胶片 · 22 秒自动换卷</span>
+    </div>
+    <div class="hud-group">
+      <a class="hud-link" href="../index.html">← 方向选择</a>
+      <span class="tag dim">JOYTHATWAY 2026</span>
+    </div>
+  </footer>
+</div>
+
+<!-- =====================================================================
+     放映模式 HUD（独立于银幕，pointer-events 只在按钮上）
+     ===================================================================== -->
+<div class="screening" id="screening" aria-hidden="true">
+  <div class="s-hud s-top">
+    <div class="reel-card">
+      <div class="reel-line">
+        <span class="reel-key">REEL</span>
+        <strong class="reel-no" id="reelNo">01</strong>
+        <span class="reel-total">/08</span>
+        <span class="reel-live"><i></i>RUN</span>
+      </div>
+      <div class="reel-name" id="reelName">PLASMA DRIFT</div>
+      <div class="reel-cn cjk" id="reelCn">等离子漂流</div>
+      <div class="reel-hint" id="reelHint">信号失焦后的第一帧</div>
+      <div class="reel-dots" id="reelDots" aria-hidden="true"></div>
+    </div>
+
+    <div class="s-actions">
+      <button class="icon-btn s-btn" id="soundBtn" type="button" aria-pressed="false">♪ SOUND OFF</button>
+      <button class="icon-btn s-btn" id="exitBtn" type="button">✕ 返回大厅 <kbd>ESC</kbd></button>
+    </div>
+  </div>
+
+  <div class="s-hud s-bottom">
+    <div class="s-hints">
+      <span class="s-touch cjk">轻点画面 · 下一卷</span>
+      <span class="s-key"><kbd>CLICK</kbd> 下一卷</span>
+      <span class="s-key"><kbd>SPACE</kbd> 下一卷</span>
+      <span class="s-key"><kbd>ESC</kbd> 返回大厅</span>
+      <span class="s-hints-dim cjk">声音：右下 ♪</span>
+    </div>
+    <div class="s-time">
+      <div class="tc" id="timecode">00:00:00:00</div>
+      <div class="tc-meta">
+        <span id="tcReel">REEL 01/08</span>
+        <span class="dim">192×108 · 30FPS</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="reel-toast" id="reelToast" aria-hidden="true">
+    <span class="rt-no" id="toastNo">REEL 02/08</span>
+    <span class="rt-bar"></span>
+    <span class="rt-name" id="toastName">DEEP TUNNEL</span>
+    <span class="rt-cn cjk" id="toastCn">无尽隧道</span>
+  </div>
+</div>
+
+<!-- CRT 扫描线 / 颗粒 / 暗角 -->
+<div class="crt-fx" aria-hidden="true"></div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

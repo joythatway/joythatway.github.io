@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#06070d" />
+  <title>PIXEL EARTH // 这些年的坐标 — JOYTHATWAY</title>
+  <meta name="description" content="一个能用鼠标拖动旋转的像素地球，上面钉着这些年的几个坐标。three.js + 160×80 像素贴图，低分辨率渲染放大。" />
+  <link rel="icon" href="assets/favicon.svg" />
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./assets/three/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- 深空底：两团星云 + 地球背后的淡光晕（WebGL canvas 是透明的，叠在这层上面） -->
+    <div class="space" aria-hidden="true"></div>
+    <div class="space-glow" id="space-glow" aria-hidden="true"></div>
+
+    <!-- three.js 画布：背板尺寸只有视口 1/2.5，靠 CSS 铺满 + pixelated 放大 -->
+    <canvas id="globe" aria-hidden="true"></canvas>
+
+    <!-- 坐标标签层：HTML 像素字体，每帧跟随 3D 钉子投影 -->
+    <div class="pin-layer" id="pin-layer"></div>
+    <div class="reticle" id="reticle" aria-hidden="true"></div>
+
+    <!-- 左上 HUD -->
+    <header class="hud top">
+      <div class="hud-left">
+        <a class="brand" href="../index.html" aria-label="JOYTHATWAY 首页">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="brand-name">JOYTHATWAY</span>
+        </a>
+        <p class="hud-sub">PIXEL EARTH <span class="hud-sep">/</span> 这些年的坐标</p>
+      </div>
+      <div class="hud-group hud-right">
+        <div class="sample-wrap" id="sample-wrap">
+          <button class="tag sample-tag" id="sample-tag" type="button" aria-expanded="false" aria-controls="sample-note">SAMPLE COORDS</button>
+          <p class="sample-note" id="sample-note" role="note">
+            示例坐标，可替换<br />
+            <span class="dim">改 main.js 顶部的 PINS 数组即可</span>
+          </p>
+        </div>
+        <a class="hud-link" href="../index.html">← 方向选择</a>
+      </div>
+    </header>
+
+    <!-- 标题：不挡地球，靠左 -->
+    <section class="headline">
+      <p class="headline-eyebrow"><span class="cy">◆</span> COORDINATES <span class="dim">/</span> 05 STOPS</p>
+      <h1 class="headline-cn">这些年落过的坐标</h1>
+      <p class="headline-sub">2020 — 2026 · 一点点挪过来</p>
+    </section>
+
+    <!-- 坐标信息卡（桌面右侧悬浮 / 移动端底部抽屉） -->
+    <aside class="panel info-card" id="info-card" aria-hidden="true" aria-labelledby="ic-city">
+      <button class="icon-btn ic-close" id="ic-close" type="button" aria-label="关闭信息卡">✕ CLOSE</button>
+      <p class="ic-kicker"><span id="ic-idx">01 / 05</span> <span class="dim">· SAMPLE</span></p>
+      <div class="ic-year" id="ic-year">2020</div>
+      <h2 class="ic-city" id="ic-city">北京 <span class="ic-en" id="ic-en">BEIJING</span></h2>
+      <dl class="ic-coords">
+        <div class="ic-coord"><dt>LAT</dt><dd id="ic-lat">39.90° N</dd></div>
+        <div class="ic-coord"><dt>LON</dt><dd id="ic-lon">116.41° E</dd></div>
+      </dl>
+      <p class="ic-note" id="ic-note">起点</p>
+      <p class="ic-foot">示例坐标 · 可在 main.js 的 PINS 里替换</p>
+    </aside>
+
+    <!-- 底部年份时间轴 -->
+    <nav class="timeline" id="timeline" aria-label="年份时间轴"></nav>
+
+    <div class="readout" id="readout" aria-hidden="true">
+      <p class="ro-line"><span class="ro-key">VIEW</span><span class="ro-val" id="ro-coord">85.0°E / 30.0°N</span></p>
+      <p class="ro-line"><span class="ro-key">ZOOM</span><span class="ro-val" id="ro-zoom">×1.00</span><span class="ro-sep">·</span><span class="ro-stops">05 STOPS</span></p>
+    </div>
+
+    <div class="hint" aria-hidden="true">
+      <span class="hint-desktop"><b>DRAG</b> 旋转 <span class="hint-dot">·</span> <b>SCROLL</b> 缩放 <span class="hint-dot">/</span> <b>CLICK A YEAR</b> 定位</span>
+      <span class="hint-touch"><b>DRAG</b> 旋转 <span class="hint-dot">·</span> <b>PINCH</b> 缩放 <span class="hint-dot">/</span> <b>TAP A YEAR</b> 定位</span>
+    </div>
+
+    <p class="sr-only" id="scene-desc">
+      一个可用鼠标或手指拖动旋转的像素地球，球面上钉着五个年份坐标。
+      按 Tab 可以逐个聚焦坐标标签，Enter 打开信息卡，Esc 关闭。
+    </p>
+    <div class="live sr-only" id="live" aria-live="polite"></div>
+
+    <!-- 启动遮罩 -->
+    <div class="boot" id="boot">
+      <p class="boot-main">INITIALIZING PIXEL EARTH</p>
+      <p class="boot-sub">LOADING 160 × 80 TEXTURES …</p>
+    </div>
+
+    <noscript>
+      <div class="boot is-static"><p class="boot-main">需要开启 JavaScript</p><p class="boot-sub">THIS PAGE NEEDS JS + WEBGL</p></div>
+    </noscript>
+  </div>
+
+  <!-- CRT 扫描线 / 暗角 / 颗粒（来自 shared/base.css） -->
+  <div class="crt-fx" aria-hidden="true"></div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
